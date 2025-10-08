@@ -1,38 +1,108 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.app {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  align-items: center;
+  min-height: 100vh;
+  background: #f3f4f6;
 }
 
-.App-link {
-  color: #61dafb;
+.event-card {
+  padding: 1.5rem;
+  border-radius: 1rem;
+  transition: box-shadow 0.3s;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  border-left: 8px solid #2563eb;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.event-card.inactive {
+  background: #f3f4f6;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border-left: 8px solid #9ca3af;
+  opacity: 0.8;
+}
+
+.event-card:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.event-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.event-card-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #111827;
+}
+
+.event-card-title.inactive {
+  color: #6b7280;
+}
+
+.event-card-status {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.event-card-status.inactive {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
+.event-card-details {
+  margin-top: 1rem;
+  color: #374151;
+}
+
+.event-card-detail {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.event-card-detail:last-child {
+  margin-bottom: 0;
+}
+
+.event-card-detail-icon {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.5rem;
+  color: #2563eb;
+}
+
+.event-card-detail-text {
+  font-weight: 500;
+}
+
+.event-card-button {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.5rem 0;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.15);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.event-card-button:hover {
+  background: #1d4ed8;
+  transform: scale(1.01);
+}
+
+.event-card-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px #93c5fd;
 }
