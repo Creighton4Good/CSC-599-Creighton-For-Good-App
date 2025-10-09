@@ -7,6 +7,8 @@
  width: 100%; /* Ensure the container stretches across the screen */
 }
 
+/*hello*/
+
 .event-card {
   padding: 1.5rem;
   border-radius: 1rem;
@@ -107,3 +109,5 @@
   outline: none;
   box-shadow: 0 0 0 4px #93c5fd;
 }
+
+
