@@ -1,10 +1,10 @@
 .app {
- display: flex;
- flex-direction: column; /* Stack content vertically: Header then Main */
- align-items: center; /* Center all stacked content horizontally */
- min-height: 100vh; /* Ensures the background covers the full viewport */
- background: #f3f4f6;
- width: 100%; /* Ensure the container stretches across the screen */
+  display: flex;
+  flex-direction: column; /* Stack content vertically: Header then Main */
+  align-items: center; /* Center all stacked content horizontally */
+  min-height: 100vh; /* Ensures the background covers the full viewport */
+  background: #f3f4f6;
+  width: 100%; /* Ensure the container stretches across the screen */
 }
 
 /*hello*/
@@ -14,19 +14,19 @@
   border-radius: 1rem;
   transition: box-shadow 0.3s;
   background: #fff;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   border-left: 8px solid #2563eb;
 }
 
 .event-card.inactive {
   background: #f3f4f6;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   border-left: 8px solid #9ca3af;
   opacity: 0.8;
 }
 
 .event-card:hover {
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
 .event-card-header {
@@ -94,7 +94,7 @@
   color: #fff;
   font-weight: 600;
   border-radius: 0.5rem;
-  box-shadow: 0 2px 8px rgba(37,99,235,0.15);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
   border: none;
   cursor: pointer;
   transition: background 0.15s, transform 0.15s;
@@ -110,4 +110,55 @@
   box-shadow: 0 0 0 4px #93c5fd;
 }
 
+/* ------------------- */
+/* Header Tab Styling  */
+/* ------------------- */
 
+.tab-navigation {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb; /* light gray line */
+}
+
+.tab-button {
+  padding: 0.5rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  color: #6b7280; /* gray-500 */
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  background: #f3f4f6; /* gray-100 */
+  color: #374151; /* gray-700 */
+}
+
+.tab-button.active {
+  background: #2563eb; /* blue-600 */
+  color: white;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  transform: translateY(-2px);
+}
+
+.app-header {
+  width: 100%;
+  background: white;
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.app-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
