@@ -22,6 +22,35 @@ frontend/
 docker-compose.yml                            # Single MySQL service for local dev
 ```
 
+## File Management & Structure
+
+```
+.
+├── backend/                      # Spring Boot service and schema scripts
+│   ├── mvnw, mvnw.cmd            # Maven wrapper entry points
+│   ├── pom.xml                   # Backend dependencies + build plugins
+│   ├── src/main/java/backend/
+│   │   ├── backend/entities      # JPA entities mirrored from Script.sql
+│   │   ├── backend/events        # Controllers, DTOs, services
+│   │   └── backend/config        # Data initializer, CORS config, etc.
+│   └── src/main/resources/
+│       ├── application.properties# Datasource + JPA settings
+│       └── Script.sql            # MySQL schema imported by Docker
+├── frontend/                     # React + Vite single-page UI
+│   ├── package.json              # Frontend dependencies/scripts
+│   └── src/                      # App.js, components, faux auth helpers
+├── docker-compose.yml            # MySQL container wiring for local dev
+├── SkeletonERD.mwb               # MySQL Workbench ER diagram source
+├── README.md                     # This guide; keep updated when structure shifts
+└── backend-server.log            # Sample API log (safe to delete/regenerate)
+```
+
+Guidelines:
+
+- Keep backend-only resources in `backend/` and frontend assets in `frontend/` to avoid leaking framework-specific configs across the stack.
+- If you add new shared docs, store them at the repo root (next to this README) so both teams can find them.
+- Generated artifacts such as build outputs or IDE metadata should stay ignored via `.gitignore`; avoid committing transient files into either subtree.
+
 ## Prerequisites
 
 - Docker Desktop (or Docker Engine) for the MySQL container.
