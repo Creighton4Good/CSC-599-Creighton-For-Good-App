@@ -20,6 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Coordinates event CRUD operations while enforcing organization/location/user relationships.
+ * This layer keeps the controllers slim and centralizes validation so the frontend only needs to send IDs.
+ */
 @Service
 public class EventService {
 
@@ -38,6 +42,9 @@ public class EventService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * Returns matching events, eager-loading the relationships needed by the frontend cards.
+     */
     @Transactional(readOnly = true)
     public List<EventResponse> list(String q) {
         List<Event> events = (q == null || q.isBlank())
@@ -49,6 +56,9 @@ public class EventService {
                 .toList();
     }
 
+    /**
+     * Fetches a single event with related data or null if it does not exist.
+     */
     @Transactional(readOnly = true)
     public EventResponse get(Long id) {
         return eventRepository.findById(id)
@@ -56,6 +66,9 @@ public class EventService {
                 .orElse(null);
     }
 
+    /**
+     * Creates a new event after applying validation/mapping rules.
+     */
     @Transactional
     public EventResponse create(EventRequest request) {
         Event event = new Event();
@@ -63,6 +76,9 @@ public class EventService {
         return EventMapper.toResponse(eventRepository.save(event));
     }
 
+    /**
+     * Updates an existing event, preserving referential integrity.
+     */
     @Transactional
     public EventResponse update(Long id, EventRequest request) {
         Event event = eventRepository.findById(id)
@@ -71,11 +87,17 @@ public class EventService {
         return EventMapper.toResponse(eventRepository.save(event));
     }
 
+    /**
+     * Removes an event by id.
+     */
     @Transactional
     public void delete(Long id) {
         eventRepository.deleteById(id);
     }
 
+    /**
+     * Applies incoming data to the entity instance (new or existing).
+     */
     private void apply(Event event, EventRequest request) {
         String title = Optional.ofNullable(request.title())
                 .map(String::trim)
@@ -123,6 +145,9 @@ public class EventService {
                 .orElseThrow(() -> new EntityNotFoundException("Organization %d not found".formatted(organizationId)));
     }
 
+    /**
+     * Returns an organization-scoped location, creating one if only a name is provided.
+     */
     private Location resolveLocation(Long locationId, String locationName, Organization organization) {
         if (locationId != null) {
             Location location = locationRepository.findById(locationId)

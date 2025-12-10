@@ -272,10 +272,14 @@ const HeaderWithTabs = ({ activeTab, onTabChange, userRole, userName }) => {
   );
 };
 
+// Keys used to persist the simple honor-system auth state between page reloads.
 const ROLE_KEY = "c4g-role";
 const USERNAME_KEY = "c4g-username";
 const ACCOUNTS_KEY = "c4g-accounts";
 
+/**
+ * Root dashboard component. Handles the honor-system login flow plus CRUD interactions with the backend.
+ */
 const App = () => {
   const [activeTab, setActiveTab] = useState("Active Events");
   const [events, setEvents] = useState([]);
@@ -284,6 +288,7 @@ const App = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [userRole, setUserRole] = useState(() => localStorage.getItem(ROLE_KEY));
   const [userName, setUserName] = useState(() => localStorage.getItem(USERNAME_KEY));
+  // Stored accounts per role (prototype only; not persisted server-side).
   const [accounts, setAccounts] = useState(() => {
     const base = { FACULTY: [], STUDENT: [] };
     try {
@@ -360,6 +365,7 @@ const App = () => {
     setRegisterForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Honor-system login & account management.
   const handleLogin = () => {
     const username = loginForm.username.trim();
     const password = loginForm.password.trim();

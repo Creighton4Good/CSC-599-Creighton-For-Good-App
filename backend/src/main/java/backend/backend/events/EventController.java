@@ -10,6 +10,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * REST surface for event management. The backing service keeps the heavy lifting centralized.
+ */
 @RestController
 @RequestMapping("api/events")
 @CrossOrigin(origins = "http://localhost:3000")
