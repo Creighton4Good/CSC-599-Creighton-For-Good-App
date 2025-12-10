@@ -1,14 +1,16 @@
 package backend.backend.events;
 
-import backend.backend.entities.Event;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("api/events")
-@CrossOrigin(origins = "http://localhost:3000") // Allow requests from React
+@CrossOrigin(origins = "http://localhost:3000")
 public class EventController {
     private final EventService service;
 
@@ -17,28 +19,26 @@ public class EventController {
     }
 
     @GetMapping
-    public List<Event> list(@RequestParam(required = false) String q) {
+    public List<EventDto> list(@RequestParam(required = false) String q) {
         return service.list(q);
     }
 
     @GetMapping("/{id}")
-    public Event get(@PathVariable Long id) {
-        Event e = service.get(id);
-        if (e == null)
-            throw new EventNotFound();
-        return e;
+    public EventDto get(@PathVariable Long id) {
+        EventDto dto = service.get(id);
+        if (dto == null)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found");
+        return dto;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Event create(@RequestBody Event req) {
+    public EventDto create(@RequestBody EventDto req) {
         return service.create(req);
     }
 
     @PutMapping("/{id}")
-    public Event update(@PathVariable Long id, @RequestBody Event req) {
-        if (service.get(id) == null)
-            throw new EventNotFound();
+    public EventDto update(@PathVariable Long id, @RequestBody EventDto req) {
         return service.update(id, req);
     }
 
@@ -48,7 +48,15 @@ public class EventController {
         service.delete(id);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleValidation(IllegalArgumentException ex) {
+        return Map.of("error", ex.getMessage());
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    private static class EventNotFound extends RuntimeException {
+    public Map<String, String> handleNotFound(EntityNotFoundException ex) {
+        return Map.of("error", ex.getMessage());
     }
 }
