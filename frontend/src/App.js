@@ -240,16 +240,100 @@ const HeaderWithTabs = ({ activeTab, onTabChange }) => {
 };
 
 // ---------------------------------------------
-// Main App Component
+// SignInPage Component (NEW)
+// ---------------------------------------------
+const SignInPage = ({ onLogin }) => {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Dummy authentication logic: any non-empty fields will "succeed"
+    if (username && password) {
+      onLogin(); // Call the login function passed from the parent App
+    } else {
+      alert("Please enter a username and password.");
+    }
+  };
+
+  return (
+    <div className="signin-page-container">
+      <div className="signin-box">
+        <h2 className="signin-title">Sign In</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="username">
+              Username/Email
+            </label>
+            <input
+              type="text"
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="form-input"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="password">
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="form-input"
+              required
+            />
+          </div>
+          <button type="submit" className="button-primary signin-btn">
+            Log In
+          </button>
+        </form>
+        <div className="signin-footer">
+          {/* FIX 1/3: Changed href="#" to href="#!" to fix jsx-a11y/anchor-is-valid warning */}
+          <a href="#!" onClick={() => alert("Forgot Password not implemented.")}>
+            Forgot Password?
+          </a>
+          {/* FIX 2/3: Changed href="#" to href="#!" to fix jsx-a11y/anchor-is-valid warning */}
+          <a href="#!" onClick={() => alert("Sign Up not implemented.")}>
+            Sign Up
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------
+// Main App Component (MODIFIED)
 // ---------------------------------------------
 const App = () => {
   const [activeTab, setActiveTab] = useState("Active Events");
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // NEW: Login handler (FIX 3/3: Now used in the return statement)
+  const handleLogin = () => {
+    // In a real app, you would handle token storage here
+    setIsLoggedIn(true);
+  };
+
+  // NEW: Logout handler (FIX 4/3: Now used in the renderContent 'Profile' case)
+  const handleLogout = () => {
+    // In a real app, you would clear token/session here
+    setIsLoggedIn(false);
+    setActiveTab("Active Events"); // Reset view on logout
+  };
 
   // Fetch all events from the backend
   const fetchEvents = async () => {
+    // Only fetch if logged in
+    if (!isLoggedIn) return;
+
     try {
       const response = await fetch("http://localhost:8080/api/events");
       if (!response.ok) throw new Error("Failed to fetch events");
@@ -261,8 +345,14 @@ const App = () => {
   };
 
   useEffect(() => {
-    fetchEvents();
-  }, []);
+    // Only attempt to fetch events if the user is logged in
+    // This consolidated useEffect handles initial fetch and re-fetch on login status change.
+    if (isLoggedIn) {
+      fetchEvents();
+    }
+  }, [isLoggedIn]); // Re-run effect when login status changes
+  
+  // REMOVED: Redundant useEffect with empty dependency array which caused warnings.
 
   // Fetch a single event by ID
   const fetchEventById = async (id) => {
@@ -423,6 +513,13 @@ const App = () => {
             <p className="profile-message">
               This is where your user profile information would go.
             </p>
+            {/* NEW: Logout Button (Fixes 'handleLogout' unused warning) */}
+            <button
+              onClick={handleLogout}
+              className="button-secondary logout-btn"
+            >
+              Log Out
+            </button>
           </div>
         );
       default:
@@ -430,16 +527,24 @@ const App = () => {
     }
   };
 
+  // Conditional rendering based on authentication state
   return (
     <div className="app">
-      <HeaderWithTabs activeTab={activeTab} onTabChange={setActiveTab} />
-      <main className="app-main-content">{renderContent()}</main>
+      {isLoggedIn ? (
+        <>
+          <HeaderWithTabs activeTab={activeTab} onTabChange={setActiveTab} />
+          <main className="app-main-content">{renderContent()}</main>
 
-      {showCreateModal && (
-        <CreateEventModal
-          onClose={() => setShowCreateModal(false)}
-          onCreateEvent={handleCreateEvent}
-        />
+          {showCreateModal && (
+            <CreateEventModal
+              onClose={() => setShowCreateModal(false)}
+              onCreateEvent={handleCreateEvent}
+            />
+          )}
+        </>
+      ) : (
+        // Show the Sign In Page if not logged in (Fixes 'SignInPage' unused warning)
+        <SignInPage onLogin={handleLogin} />
       )}
     </div>
   );

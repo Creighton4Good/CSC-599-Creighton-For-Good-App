@@ -419,3 +419,59 @@
 .event-details-info {
   color: #6b7280;
 }
+
+/* --- Sign In Page Styles --- */
+.signin-page-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    width: 100%;
+    background-color: var(--color-background); /* Use your app's background color */
+}
+
+.signin-box {
+    background-color: #ffffff;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 360px;
+}
+
+.signin-title {
+    text-align: center;
+    color: var(--color-primary);
+    margin-bottom: 30px;
+    font-size: 24px;
+}
+
+.signin-btn {
+    margin-top: 10px;
+    width: 100%;
+    /* Reuses .button-primary styling, so ensure it has a width: 100% or adjust here */
+}
+
+.signin-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #666;
+}
+
+.signin-footer a {
+    color: var(--color-primary);
+    text-decoration: none;
+    margin: 0 10px;
+    transition: color 0.2s;
+}
+
+.signin-footer a:hover {
+    text-decoration: underline;
+    color: var(--color-secondary);
+}
+
+/* Ensure the logout button is styled */
+.logout-btn {
+    margin-top: 20px;
+}
