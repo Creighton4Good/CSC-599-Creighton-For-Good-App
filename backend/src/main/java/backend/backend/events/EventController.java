@@ -1,5 +1,6 @@
 package backend.backend.events;
 
+import backend.backend.entities.Event;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 

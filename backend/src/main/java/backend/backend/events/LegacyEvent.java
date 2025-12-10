@@ -1,10 +1,11 @@
 package backend.backend.events;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Set;
+import backend.backend.entities.Event;
 
-public class Event {
+// This class is deprecated - using backend.backend.entities.Event instead
+// Kept for backwards compatibility during transition
+@Deprecated
+public class LegacyEvent extends Event {
     private Long id;
     private String title;
     private String description;
