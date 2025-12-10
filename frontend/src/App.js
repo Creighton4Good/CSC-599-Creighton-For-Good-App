@@ -1,10 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { MapPin, Clock, Users, X, Plus } from "lucide-react";
 import "./App.css";
 
 const API_BASE = "http://localhost:8080/api";
 
-const EventCard = ({ event, onViewDetails, onMarkCompleted, onDelete }) => {
+const EventCard = ({
+  event,
+  canManage,
+  onViewDetails,
+  onMarkCompleted,
+  onDelete,
+}) => {
   const isActive = event.status === "ACTIVE";
   const locationDisplay = event.locationDetails || event.locationName || "TBD";
 
@@ -43,7 +49,7 @@ const EventCard = ({ event, onViewDetails, onMarkCompleted, onDelete }) => {
         </p>
       </div>
 
-      {isActive && (
+      {isActive && canManage && (
         <div className="event-card-actions">
           <button
             className="event-card-button"
@@ -63,17 +69,12 @@ const EventCard = ({ event, onViewDetails, onMarkCompleted, onDelete }) => {
   );
 };
 
-const CreateEventModal = ({
-  onClose,
-  onCreateEvent,
-  organizations,
-  locations,
-}) => {
+const CreateEventModal = ({ onClose, onCreateEvent, organizations }) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     organizationId: organizations.length ? String(organizations[0].id) : "",
-    locationId: "",
+    locationName: "",
     startsAt: "",
     endsAt: "",
     meals: "",
@@ -89,29 +90,11 @@ const CreateEventModal = ({
     }
   }, [organizations, formData.organizationId]);
 
-  const filteredLocations = useMemo(() => {
-    if (!formData.organizationId) {
-      return locations;
-    }
-    const orgId = Number(formData.organizationId);
-    return locations.filter((loc) => loc.organizationId === orgId);
-  }, [locations, formData.organizationId]);
-
-  useEffect(() => {
-    if (!formData.locationId && filteredLocations.length) {
-      setFormData((prev) => ({
-        ...prev,
-        locationId: String(filteredLocations[0].id),
-      }));
-    }
-  }, [filteredLocations, formData.locationId]);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === "organizationId" ? { locationId: "" } : {}),
     }));
   };
 
@@ -120,7 +103,7 @@ const CreateEventModal = ({
       !formData.title ||
       !formData.description ||
       !formData.organizationId ||
-      !formData.locationId ||
+      !formData.locationName ||
       !formData.startsAt
     ) {
       alert("Please fill in all required fields");
@@ -131,7 +114,7 @@ const CreateEventModal = ({
       title: formData.title.trim(),
       description: formData.description.trim(),
       organizationId: Number(formData.organizationId),
-      locationId: Number(formData.locationId),
+      locationName: formData.locationName.trim(),
       startsAt: formData.startsAt,
       endsAt: formData.endsAt || null,
       meals: formData.meals ? parseInt(formData.meals, 10) : 0,
@@ -192,24 +175,13 @@ const CreateEventModal = ({
 
           <div className="form-group">
             <label className="form-label">Location *</label>
-            <select
-              name="locationId"
-              value={formData.locationId}
+            <input
+              type="text"
+              name="locationName"
+              value={formData.locationName}
               onChange={handleChange}
               className="form-input"
-              disabled={!filteredLocations.length}
-            >
-              <option value="">
-                {filteredLocations.length
-                  ? "Select location"
-                  : "No locations available"}
-              </option>
-              {filteredLocations.map((loc) => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.displayName}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           <div className="form-group">
@@ -274,12 +246,14 @@ const CreateEventModal = ({
   );
 };
 
-const HeaderWithTabs = ({ activeTab, onTabChange }) => {
+const HeaderWithTabs = ({ activeTab, onTabChange, userRole }) => {
   const tabs = ["Active Events", "Completed", "Profile"];
+  const roleLabel = userRole === "FACULTY" ? "Faculty / Staff" : "Student";
 
   return (
     <header className="app-header">
       <h1 className="app-title">Event Dashboard</h1>
+      <div className="role-indicator">Signed in as: {roleLabel}</div>
       <nav className="tab-navigation">
         {tabs.map((tab) => (
           <button
@@ -295,13 +269,15 @@ const HeaderWithTabs = ({ activeTab, onTabChange }) => {
   );
 };
 
+const ROLE_KEY = "c4g-role";
+
 const App = () => {
   const [activeTab, setActiveTab] = useState("Active Events");
   const [events, setEvents] = useState([]);
   const [organizations, setOrganizations] = useState([]);
-  const [locations, setLocations] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [userRole, setUserRole] = useState(() => localStorage.getItem(ROLE_KEY));
 
   const fetchEvents = async () => {
     try {
@@ -325,22 +301,22 @@ const App = () => {
     }
   };
 
-  const fetchLocations = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/locations`);
-      if (!response.ok) throw new Error("Failed to fetch locations");
-      const data = await response.json();
-      setLocations(data);
-    } catch (error) {
-      console.error("Error fetching locations:", error);
-    }
-  };
-
   useEffect(() => {
     fetchEvents();
     fetchOrganizations();
-    fetchLocations();
   }, []);
+
+  useEffect(() => {
+    if (userRole) {
+      localStorage.setItem(ROLE_KEY, userRole);
+    } else {
+      localStorage.removeItem(ROLE_KEY);
+    }
+  }, [userRole]);
+
+  const handleRoleSelect = (role) => {
+    setUserRole(role);
+  };
 
   const fetchEventById = async (id) => {
     try {
@@ -354,6 +330,9 @@ const App = () => {
   };
 
   const handleMarkCompleted = async (id) => {
+    if (userRole !== "FACULTY") {
+      return;
+    }
     try {
       const event = events.find((e) => e.id === id);
       if (!event) return;
@@ -385,6 +364,9 @@ const App = () => {
   };
 
   const handleCreateEvent = async (eventData) => {
+    if (userRole !== "FACULTY") {
+      return;
+    }
     try {
       const response = await fetch(`${API_BASE}/events`, {
         method: "POST",
@@ -404,6 +386,9 @@ const App = () => {
   };
 
   const handleDeleteEvent = async (id) => {
+    if (userRole !== "FACULTY") {
+      return;
+    }
     if (!window.confirm("Are you sure you want to delete this event?")) {
       return;
     }
@@ -424,6 +409,8 @@ const App = () => {
     fetchEventById(id);
   };
 
+  const canManage = userRole === "FACULTY";
+
   const filteredEvents = events.filter((event) => {
     if (activeTab === "Active Events") return event.status === "ACTIVE";
     if (activeTab === "Completed")
@@ -439,7 +426,7 @@ const App = () => {
           <div className="content-container">
             <div className="content-header">
               <h2 className="content-title">{activeTab}</h2>
-              {activeTab === "Active Events" && (
+              {activeTab === "Active Events" && canManage && (
                 <button
                   onClick={() => setShowCreateModal(true)}
                   className="create-event-button"
@@ -458,6 +445,7 @@ const App = () => {
                   <EventCard
                     key={event.id}
                     event={event}
+                    canManage={canManage}
                     onViewDetails={handleViewDetails}
                     onMarkCompleted={handleMarkCompleted}
                     onDelete={handleDeleteEvent}
@@ -502,10 +490,27 @@ const App = () => {
       case "Profile":
         return (
           <div className="content-container">
-            <h2 className="content-title">User Profile</h2>
+            <h2 className="content-title">Account</h2>
             <p className="profile-message">
-              This is where your user profile information would go.
+              Choose how you want to access the dashboard.
             </p>
+            <div className="form-group">
+              <label className="form-label">Role</label>
+              <select
+                className="form-input"
+                value={userRole}
+                onChange={(e) => handleRoleSelect(e.target.value)}
+              >
+                <option value="FACULTY">Faculty / Staff</option>
+                <option value="STUDENT">Student</option>
+              </select>
+            </div>
+            <button
+              className="button-secondary"
+              onClick={() => handleRoleSelect(null)}
+            >
+              Log out
+            </button>
           </div>
         );
       default:
@@ -513,9 +518,40 @@ const App = () => {
     }
   };
 
+  if (!userRole) {
+    return (
+      <div className="app">
+        <div className="content-container">
+          <h2 className="content-title">Welcome to the Event Portal</h2>
+          <p className="profile-message">
+            Choose how you want to view the prototype dashboard.
+          </p>
+          <div className="role-selection-buttons">
+            <button
+              className="button-primary"
+              onClick={() => handleRoleSelect("FACULTY")}
+            >
+              Faculty / Staff
+            </button>
+            <button
+              className="button-secondary"
+              onClick={() => handleRoleSelect("STUDENT")}
+            >
+              Student
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
-      <HeaderWithTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <HeaderWithTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        userRole={userRole}
+      />
       <main className="app-main-content">{renderContent()}</main>
 
       {showCreateModal && (
@@ -523,7 +559,6 @@ const App = () => {
           onClose={() => setShowCreateModal(false)}
           onCreateEvent={handleCreateEvent}
           organizations={organizations}
-          locations={locations}
         />
       )}
     </div>

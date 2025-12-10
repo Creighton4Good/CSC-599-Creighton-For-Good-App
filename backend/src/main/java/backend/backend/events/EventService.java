@@ -92,11 +92,7 @@ public class EventService {
         event.setStatus(parseStatus(request.status()));
 
         Organization organization = resolveOrganization(request.organizationId());
-        Location location = resolveLocation(request.locationId());
-        if (location.getOrganization() == null
-                || !location.getOrganization().getOrgId().equals(organization.getOrgId())) {
-            throw new IllegalArgumentException("Location does not belong to the provided organization");
-        }
+        Location location = resolveLocation(request.locationId(), request.locationName(), organization);
         event.setOrganization(organization);
         event.setLocation(location);
 
@@ -127,12 +123,28 @@ public class EventService {
                 .orElseThrow(() -> new EntityNotFoundException("Organization %d not found".formatted(organizationId)));
     }
 
-    private Location resolveLocation(Long locationId) {
-        if (locationId == null) {
-            throw new IllegalArgumentException("Location is required");
+    private Location resolveLocation(Long locationId, String locationName, Organization organization) {
+        if (locationId != null) {
+            Location location = locationRepository.findById(locationId)
+                    .orElseThrow(() -> new EntityNotFoundException("Location %d not found".formatted(locationId)));
+            if (location.getOrganization() == null
+                    || !location.getOrganization().getOrgId().equals(organization.getOrgId())) {
+                throw new IllegalArgumentException("Location does not belong to the provided organization");
+            }
+            return location;
         }
-        return locationRepository.findById(locationId)
-                .orElseThrow(() -> new EntityNotFoundException("Location %d not found".formatted(locationId)));
+
+        String sanitizedName = Optional.ofNullable(locationName)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .orElseThrow(() -> new IllegalArgumentException("Location name is required"));
+
+        return locationRepository
+                .findByOrganizationOrgIdAndNameIgnoreCase(organization.getOrgId(), sanitizedName)
+                .orElseGet(() -> {
+                    Location location = new Location(organization, sanitizedName);
+                    return locationRepository.save(location);
+                });
     }
 
     private User resolveCreator(Long createdById) {

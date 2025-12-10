@@ -7,6 +7,7 @@ public record EventRequest(
         String description,
         Long organizationId,
         Long locationId,
+        String locationName,
         Long createdById,
         LocalDateTime startsAt,
         LocalDateTime endsAt,
