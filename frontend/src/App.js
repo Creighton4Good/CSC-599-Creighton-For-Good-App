@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { MapPin, Clock, Users, X, Plus } from "lucide-react";
 import "./App.css";
 
-// ---------------------------------------------
-// EventCard Component
-// ---------------------------------------------
+const API_BASE = "http://localhost:8080/api";
+
 const EventCard = ({ event, onViewDetails, onMarkCompleted, onDelete }) => {
-  const isActive = event.status === "Active";
+  const isActive = event.status === "ACTIVE";
+  const locationDisplay = event.locationDetails || event.locationName || "TBD";
 
   return (
     <div className={`event-card${!isActive ? " inactive" : ""}`}>
@@ -16,7 +16,7 @@ const EventCard = ({ event, onViewDetails, onMarkCompleted, onDelete }) => {
         </h3>
         <div className="event-card-header-actions">
           <div className={`event-card-status${!isActive ? " inactive" : ""}`}>
-            {event.status}
+            {event.statusLabel}
           </div>
           <button className="delete-button" onClick={() => onDelete(event.id)}>
             Delete
@@ -27,16 +27,18 @@ const EventCard = ({ event, onViewDetails, onMarkCompleted, onDelete }) => {
       <div className="event-card-details">
         <p className="event-card-detail">
           <MapPin className="event-card-detail-icon" />
-          <span className="event-card-detail-text">{event.location}</span>
+          <span className="event-card-detail-text">{locationDisplay}</span>
         </p>
         <p className="event-card-detail">
           <Clock className="event-card-detail-icon" />
-          <span className="event-card-detail-text">{event.time}</span>
+          <span className="event-card-detail-text">
+            {event.time || "Schedule TBA"}
+          </span>
         </p>
         <p className="event-card-detail">
           <Users className="event-card-detail-icon" />
           <span className="event-card-detail-text">
-            Est. Meals Available: {event.meals}
+            Est. Meals Available: {event.meals ?? 0}
           </span>
         </p>
       </div>
@@ -61,55 +63,82 @@ const EventCard = ({ event, onViewDetails, onMarkCompleted, onDelete }) => {
   );
 };
 
-// ---------------------------------------------
-// CreateEventModal Component
-// ---------------------------------------------
-const CreateEventModal = ({ onClose, onCreateEvent }) => {
+const CreateEventModal = ({
+  onClose,
+  onCreateEvent,
+  organizations,
+  locations,
+}) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    location: "",
+    organizationId: organizations.length ? String(organizations[0].id) : "",
+    locationId: "",
     startsAt: "",
     endsAt: "",
     meals: "",
-    tags: "",
+    status: "ACTIVE",
   });
+
+  useEffect(() => {
+    if (!formData.organizationId && organizations.length) {
+      setFormData((prev) => ({
+        ...prev,
+        organizationId: String(organizations[0].id),
+      }));
+    }
+  }, [organizations, formData.organizationId]);
+
+  const filteredLocations = useMemo(() => {
+    if (!formData.organizationId) {
+      return locations;
+    }
+    const orgId = Number(formData.organizationId);
+    return locations.filter((loc) => loc.organizationId === orgId);
+  }, [locations, formData.organizationId]);
+
+  useEffect(() => {
+    if (!formData.locationId && filteredLocations.length) {
+      setFormData((prev) => ({
+        ...prev,
+        locationId: String(filteredLocations[0].id),
+      }));
+    }
+  }, [filteredLocations, formData.locationId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "organizationId" ? { locationId: "" } : {}),
+    }));
   };
 
   const handleSubmit = () => {
     if (
       !formData.title ||
       !formData.description ||
-      !formData.location ||
-      !formData.startsAt ||
-      !formData.endsAt ||
-      !formData.meals
+      !formData.organizationId ||
+      !formData.locationId ||
+      !formData.startsAt
     ) {
       alert("Please fill in all required fields");
       return;
     }
 
-    const tagsArray = formData.tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag);
-
-    const eventData = {
-      title: formData.title,
-      description: formData.description,
-      location: formData.location,
+    const payload = {
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      organizationId: Number(formData.organizationId),
+      locationId: Number(formData.locationId),
       startsAt: formData.startsAt,
-      endsAt: formData.endsAt,
-      meals: parseInt(formData.meals) || 0,
-      tags: tagsArray,
-      status: "Active",
+      endsAt: formData.endsAt || null,
+      meals: formData.meals ? parseInt(formData.meals, 10) : 0,
+      status: formData.status || "ACTIVE",
     };
 
-    onCreateEvent(eventData);
+    onCreateEvent(payload);
   };
 
   return (
@@ -145,14 +174,42 @@ const CreateEventModal = ({ onClose, onCreateEvent }) => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Location *</label>
-            <input
-              type="text"
-              name="location"
-              value={formData.location}
+            <label className="form-label">Organization *</label>
+            <select
+              name="organizationId"
+              value={formData.organizationId}
               onChange={handleChange}
               className="form-input"
-            />
+            >
+              <option value="">Select organization</option>
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Location *</label>
+            <select
+              name="locationId"
+              value={formData.locationId}
+              onChange={handleChange}
+              className="form-input"
+              disabled={!filteredLocations.length}
+            >
+              <option value="">
+                {filteredLocations.length
+                  ? "Select location"
+                  : "No locations available"}
+              </option>
+              {filteredLocations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.displayName}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">
@@ -167,7 +224,7 @@ const CreateEventModal = ({ onClose, onCreateEvent }) => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">End Date & Time *</label>
+            <label className="form-label">End Date & Time</label>
             <input
               type="datetime-local"
               name="endsAt"
@@ -178,7 +235,7 @@ const CreateEventModal = ({ onClose, onCreateEvent }) => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Estimated Meals *</label>
+            <label className="form-label">Estimated Meals</label>
             <input
               type="number"
               name="meals"
@@ -190,15 +247,17 @@ const CreateEventModal = ({ onClose, onCreateEvent }) => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Tags (comma-separated)</label>
-            <input
-              type="text"
-              name="tags"
-              value={formData.tags}
+            <label className="form-label">Status</label>
+            <select
+              name="status"
+              value={formData.status}
               onChange={handleChange}
-              placeholder="e.g. community, food, volunteering"
               className="form-input"
-            />
+            >
+              <option value="ACTIVE">Active</option>
+              <option value="PUBLISHED">Published</option>
+              <option value="DRAFT">Draft</option>
+            </select>
           </div>
 
           <div className="modal-actions">
@@ -215,9 +274,6 @@ const CreateEventModal = ({ onClose, onCreateEvent }) => {
   );
 };
 
-// ---------------------------------------------
-// HeaderWithTabs Component
-// ---------------------------------------------
 const HeaderWithTabs = ({ activeTab, onTabChange }) => {
   const tabs = ["Active Events", "Completed", "Profile"];
 
@@ -239,19 +295,17 @@ const HeaderWithTabs = ({ activeTab, onTabChange }) => {
   );
 };
 
-// ---------------------------------------------
-// Main App Component
-// ---------------------------------------------
 const App = () => {
   const [activeTab, setActiveTab] = useState("Active Events");
   const [events, setEvents] = useState([]);
+  const [organizations, setOrganizations] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // Fetch all events from the backend
   const fetchEvents = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/events");
+      const response = await fetch(`${API_BASE}/events`);
       if (!response.ok) throw new Error("Failed to fetch events");
       const data = await response.json();
       setEvents(data);
@@ -260,14 +314,37 @@ const App = () => {
     }
   };
 
+  const fetchOrganizations = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/organizations`);
+      if (!response.ok) throw new Error("Failed to fetch organizations");
+      const data = await response.json();
+      setOrganizations(data);
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+    }
+  };
+
+  const fetchLocations = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/locations`);
+      if (!response.ok) throw new Error("Failed to fetch locations");
+      const data = await response.json();
+      setLocations(data);
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+    }
+  };
+
   useEffect(() => {
     fetchEvents();
+    fetchOrganizations();
+    fetchLocations();
   }, []);
 
-  // Fetch a single event by ID
   const fetchEventById = async (id) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/events/${id}`);
+      const response = await fetch(`${API_BASE}/events/${id}`);
       if (!response.ok) throw new Error("Event not found");
       const data = await response.json();
       setSelectedEvent(data);
@@ -276,15 +353,23 @@ const App = () => {
     }
   };
 
-  // Mark event as completed
   const handleMarkCompleted = async (id) => {
     try {
       const event = events.find((e) => e.id === id);
       if (!event) return;
 
-      const updatedEvent = { ...event, status: "Completed", meals: 0 };
+      const updatedEvent = {
+        title: event.title,
+        description: event.description,
+        organizationId: event.organizationId,
+        locationId: event.locationId,
+        startsAt: event.startsAt,
+        endsAt: event.endsAt,
+        meals: 0,
+        status: "ENDED",
+      };
 
-      const response = await fetch(`http://localhost:8080/api/events/${id}`, {
+      const response = await fetch(`${API_BASE}/events/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -293,18 +378,15 @@ const App = () => {
       });
 
       if (!response.ok) throw new Error("Failed to update event");
-
-      // Refresh events list
       await fetchEvents();
     } catch (error) {
       console.error("Error marking event as completed:", error);
     }
   };
 
-  // Create new event
   const handleCreateEvent = async (eventData) => {
     try {
-      const response = await fetch("http://localhost:8080/api/events", {
+      const response = await fetch(`${API_BASE}/events`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -314,7 +396,6 @@ const App = () => {
 
       if (!response.ok) throw new Error("Failed to create event");
 
-      // Refresh events list and close modal
       await fetchEvents();
       setShowCreateModal(false);
     } catch (error) {
@@ -322,20 +403,17 @@ const App = () => {
     }
   };
 
-  // Delete event
   const handleDeleteEvent = async (id) => {
     if (!window.confirm("Are you sure you want to delete this event?")) {
       return;
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/events/${id}`, {
+      const response = await fetch(`${API_BASE}/events/${id}`, {
         method: "DELETE",
       });
 
       if (!response.ok) throw new Error("Failed to delete event");
-
-      // Refresh events list
       await fetchEvents();
     } catch (error) {
       console.error("Error deleting event:", error);
@@ -346,14 +424,13 @@ const App = () => {
     fetchEventById(id);
   };
 
-  // Filter events based on the active tab
   const filteredEvents = events.filter((event) => {
-    if (activeTab === "Active Events") return event.status === "Active";
-    if (activeTab === "Completed") return event.status === "Completed";
+    if (activeTab === "Active Events") return event.status === "ACTIVE";
+    if (activeTab === "Completed")
+      return event.status === "ENDED" || event.status === "CANCELLED";
     return true;
   });
 
-  // Render the content based on the active tab
   const renderContent = () => {
     switch (activeTab) {
       case "Active Events":
@@ -397,7 +474,13 @@ const App = () => {
                     {selectedEvent.description}
                   </p>
                   <p className="event-details-info">
-                    <strong>Location:</strong> {selectedEvent.location}
+                    <strong>Organization:</strong>{" "}
+                    {selectedEvent.organizationName}
+                  </p>
+                  <p className="event-details-info">
+                    <strong>Location:</strong>{" "}
+                    {selectedEvent.locationDetails ||
+                      selectedEvent.locationName}
                   </p>
                   <p className="event-details-info">
                     <strong>Time:</strong> {selectedEvent.time}
@@ -439,6 +522,8 @@ const App = () => {
         <CreateEventModal
           onClose={() => setShowCreateModal(false)}
           onCreateEvent={handleCreateEvent}
+          organizations={organizations}
+          locations={locations}
         />
       )}
     </div>

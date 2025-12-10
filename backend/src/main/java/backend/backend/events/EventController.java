@@ -1,5 +1,7 @@
 package backend.backend.events;
 
+import backend.backend.events.dto.EventRequest;
+import backend.backend.events.dto.EventResponse;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -19,13 +21,13 @@ public class EventController {
     }
 
     @GetMapping
-    public List<EventDto> list(@RequestParam(required = false) String q) {
+    public List<EventResponse> list(@RequestParam(required = false) String q) {
         return service.list(q);
     }
 
     @GetMapping("/{id}")
-    public EventDto get(@PathVariable Long id) {
-        EventDto dto = service.get(id);
+    public EventResponse get(@PathVariable Long id) {
+        EventResponse dto = service.get(id);
         if (dto == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found");
         return dto;
@@ -33,12 +35,12 @@ public class EventController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public EventDto create(@RequestBody EventDto req) {
+    public EventResponse create(@RequestBody EventRequest req) {
         return service.create(req);
     }
 
     @PutMapping("/{id}")
-    public EventDto update(@PathVariable Long id, @RequestBody EventDto req) {
+    public EventResponse update(@PathVariable Long id, @RequestBody EventRequest req) {
         return service.update(id, req);
     }
 
