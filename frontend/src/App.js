@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { MapPin, Clock, Users } from "lucide-react";
+import { MapPin, Clock, Users, X, Plus } from "lucide-react";
 import "./App.css";
 
 // ---------------------------------------------
 // EventCard Component
 // ---------------------------------------------
-const EventCard = ({ event, onViewDetails }) => {
+const EventCard = ({ event, onViewDetails, onMarkCompleted, onDelete }) => {
   const isActive = event.status === "Active";
 
   return (
@@ -14,8 +14,13 @@ const EventCard = ({ event, onViewDetails }) => {
         <h3 className={`event-card-title${!isActive ? " inactive" : ""}`}>
           {event.title}
         </h3>
-        <div className={`event-card-status${!isActive ? " inactive" : ""}`}>
-          {event.status}
+        <div className="event-card-header-actions">
+          <div className={`event-card-status${!isActive ? " inactive" : ""}`}>
+            {event.status}
+          </div>
+          <button className="delete-button" onClick={() => onDelete(event.id)}>
+            Delete
+          </button>
         </div>
       </div>
 
@@ -37,13 +42,175 @@ const EventCard = ({ event, onViewDetails }) => {
       </div>
 
       {isActive && (
-        <button
-          className="event-card-button"
-          onClick={() => onViewDetails(event.id)}
-        >
-          View Details & Claim
-        </button>
+        <div className="event-card-actions">
+          <button
+            className="event-card-button"
+            onClick={() => onViewDetails(event.id)}
+          >
+            View Details & Claim
+          </button>
+          <button
+            className="event-card-button complete-button"
+            onClick={() => onMarkCompleted(event.id)}
+          >
+            Mark Completed
+          </button>
+        </div>
       )}
+    </div>
+  );
+};
+
+// ---------------------------------------------
+// CreateEventModal Component
+// ---------------------------------------------
+const CreateEventModal = ({ onClose, onCreateEvent }) => {
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    location: "",
+    startsAt: "",
+    endsAt: "",
+    meals: "",
+    tags: "",
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = () => {
+    if (
+      !formData.title ||
+      !formData.description ||
+      !formData.location ||
+      !formData.startsAt ||
+      !formData.endsAt ||
+      !formData.meals
+    ) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    const tagsArray = formData.tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter((tag) => tag);
+
+    const eventData = {
+      title: formData.title,
+      description: formData.description,
+      location: formData.location,
+      startsAt: formData.startsAt,
+      endsAt: formData.endsAt,
+      meals: parseInt(formData.meals) || 0,
+      tags: tagsArray,
+      status: "Active",
+    };
+
+    onCreateEvent(eventData);
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <button className="modal-close" onClick={onClose}>
+          <X size={24} />
+        </button>
+
+        <h2 className="modal-title">Create New Event</h2>
+
+        <div className="modal-form">
+          <div className="form-group">
+            <label className="form-label">Title *</label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Description *</label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={3}
+              className="form-input form-textarea"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Location *</label>
+            <input
+              type="text"
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Start Date & Time *</label>
+            <input
+              type="datetime-local"
+              name="startsAt"
+              value={formData.startsAt}
+              onChange={handleChange}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">End Date & Time *</label>
+            <input
+              type="datetime-local"
+              name="endsAt"
+              value={formData.endsAt}
+              onChange={handleChange}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Estimated Meals *</label>
+            <input
+              type="number"
+              name="meals"
+              value={formData.meals}
+              onChange={handleChange}
+              min="0"
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Tags (comma-separated)</label>
+            <input
+              type="text"
+              name="tags"
+              value={formData.tags}
+              onChange={handleChange}
+              placeholder="e.g. community, food, volunteering"
+              className="form-input"
+            />
+          </div>
+
+          <div className="modal-actions">
+            <button onClick={handleSubmit} className="button-primary">
+              Create Event
+            </button>
+            <button onClick={onClose} className="button-secondary">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -78,25 +245,26 @@ const HeaderWithTabs = ({ activeTab, onTabChange }) => {
 const App = () => {
   const [activeTab, setActiveTab] = useState("Active Events");
   const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null); // For event details
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Fetch all events from the backend
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch("http://localhost:8080/api/events");
+      if (!response.ok) throw new Error("Failed to fetch events");
+      const data = await response.json();
+      setEvents(data);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const response = await fetch("http://localhost:8080/api/events"); // Adjust port if needed
-        if (!response.ok) throw new Error("Failed to fetch events");
-        const data = await response.json();
-        setEvents(data);
-      } catch (error) {
-        console.error("Error fetching events:", error);
-      }
-    };
-
     fetchEvents();
-  }, []); // Only run once on mount
+  }, []);
 
-  // Fetch a single event by ID (for "View Details & Claim" button)
+  // Fetch a single event by ID
   const fetchEventById = async (id) => {
     try {
       const response = await fetch(`http://localhost:8080/api/events/${id}`);
@@ -108,10 +276,74 @@ const App = () => {
     }
   };
 
-  // Handle clicking "View Details & Claim"
+  // Mark event as completed
+  const handleMarkCompleted = async (id) => {
+    try {
+      const event = events.find((e) => e.id === id);
+      if (!event) return;
+
+      const updatedEvent = { ...event, status: "Completed", meals: 0 };
+
+      const response = await fetch(`http://localhost:8080/api/events/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedEvent),
+      });
+
+      if (!response.ok) throw new Error("Failed to update event");
+
+      // Refresh events list
+      await fetchEvents();
+    } catch (error) {
+      console.error("Error marking event as completed:", error);
+    }
+  };
+
+  // Create new event
+  const handleCreateEvent = async (eventData) => {
+    try {
+      const response = await fetch("http://localhost:8080/api/events", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(eventData),
+      });
+
+      if (!response.ok) throw new Error("Failed to create event");
+
+      // Refresh events list and close modal
+      await fetchEvents();
+      setShowCreateModal(false);
+    } catch (error) {
+      console.error("Error creating event:", error);
+    }
+  };
+
+  // Delete event
+  const handleDeleteEvent = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this event?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/events/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Failed to delete event");
+
+      // Refresh events list
+      await fetchEvents();
+    } catch (error) {
+      console.error("Error deleting event:", error);
+    }
+  };
+
   const handleViewDetails = (id) => {
     fetchEventById(id);
-    // Could open a modal or navigate to a details page
   };
 
   // Filter events based on the active tab
@@ -128,25 +360,58 @@ const App = () => {
       case "Completed":
         return (
           <div className="content-container">
-            <h2>{activeTab}</h2>
-            {filteredEvents.length === 0 ? (
-              <p>No events found.</p>
-            ) : (
-              filteredEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onViewDetails={handleViewDetails}
-                />
-              ))
-            )}
+            <div className="content-header">
+              <h2 className="content-title">{activeTab}</h2>
+              {activeTab === "Active Events" && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="create-event-button"
+                >
+                  <Plus size={20} />
+                  Create Event
+                </button>
+              )}
+            </div>
+
+            <div className="events-grid">
+              {filteredEvents.length === 0 ? (
+                <p className="no-events-message">No events found.</p>
+              ) : (
+                filteredEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onViewDetails={handleViewDetails}
+                    onMarkCompleted={handleMarkCompleted}
+                    onDelete={handleDeleteEvent}
+                  />
+                ))
+              )}
+            </div>
+
             {selectedEvent && (
-              <div className="event-details-modal">
-                <h3>{selectedEvent.title}</h3>
-                <p>{selectedEvent.description}</p>
-                <p>Location: {selectedEvent.location}</p>
-                <p>Time: {selectedEvent.time}</p>
-                <button onClick={() => setSelectedEvent(null)}>Close</button>
+              <div className="modal-overlay">
+                <div className="event-details-modal">
+                  <h3 className="event-details-title">{selectedEvent.title}</h3>
+                  <p className="event-details-description">
+                    {selectedEvent.description}
+                  </p>
+                  <p className="event-details-info">
+                    <strong>Location:</strong> {selectedEvent.location}
+                  </p>
+                  <p className="event-details-info">
+                    <strong>Time:</strong> {selectedEvent.time}
+                  </p>
+                  <p className="event-details-info">
+                    <strong>Meals:</strong> {selectedEvent.meals}
+                  </p>
+                  <button
+                    onClick={() => setSelectedEvent(null)}
+                    className="button-primary"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -154,8 +419,10 @@ const App = () => {
       case "Profile":
         return (
           <div className="content-container">
-            <h2>User Profile</h2>
-            <p>This is where your user profile information would go.</p>
+            <h2 className="content-title">User Profile</h2>
+            <p className="profile-message">
+              This is where your user profile information would go.
+            </p>
           </div>
         );
       default:
@@ -167,6 +434,13 @@ const App = () => {
     <div className="app">
       <HeaderWithTabs activeTab={activeTab} onTabChange={setActiveTab} />
       <main className="app-main-content">{renderContent()}</main>
+
+      {showCreateModal && (
+        <CreateEventModal
+          onClose={() => setShowCreateModal(false)}
+          onCreateEvent={handleCreateEvent}
+        />
+      )}
     </div>
   );
 };
