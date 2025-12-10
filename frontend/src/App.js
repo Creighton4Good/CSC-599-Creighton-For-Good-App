@@ -619,11 +619,11 @@ const App = () => {
     return (
       <div className="app">
         <div className="content-container">
-          <h2 className="content-title">Welcome to the Event Portal</h2>
+          <h2 className="content-title">Welcome to Creighton for Good</h2>
           <p className="profile-message">
-            Select the type of account you would like to use for this prototype.
-            Your username should be your NetID and your password should be your
-            BluePassword.
+            This portal helps faculty, staff, and students coordinate surplus
+            food events so every meal goes to a Bluejay. Sign in below using
+            your NetID and BluePassword to get involved.
           </p>
           <div className="role-selection-buttons">
             <button
