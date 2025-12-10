@@ -246,14 +246,17 @@ const CreateEventModal = ({ onClose, onCreateEvent, organizations }) => {
   );
 };
 
-const HeaderWithTabs = ({ activeTab, onTabChange, userRole }) => {
+const HeaderWithTabs = ({ activeTab, onTabChange, userRole, userName }) => {
   const tabs = ["Active Events", "Completed", "Profile"];
   const roleLabel = userRole === "FACULTY" ? "Faculty / Staff" : "Student";
+  const signedInLabel = userName
+    ? `${userName} · ${roleLabel}`
+    : roleLabel;
 
   return (
     <header className="app-header">
       <h1 className="app-title">Event Dashboard</h1>
-      <div className="role-indicator">Signed in as: {roleLabel}</div>
+      <div className="role-indicator">Signed in as: {signedInLabel}</div>
       <nav className="tab-navigation">
         {tabs.map((tab) => (
           <button
@@ -270,6 +273,8 @@ const HeaderWithTabs = ({ activeTab, onTabChange, userRole }) => {
 };
 
 const ROLE_KEY = "c4g-role";
+const USERNAME_KEY = "c4g-username";
+const ACCOUNTS_KEY = "c4g-accounts";
 
 const App = () => {
   const [activeTab, setActiveTab] = useState("Active Events");
@@ -278,6 +283,21 @@ const App = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [userRole, setUserRole] = useState(() => localStorage.getItem(ROLE_KEY));
+  const [userName, setUserName] = useState(() => localStorage.getItem(USERNAME_KEY));
+  const [accounts, setAccounts] = useState(() => {
+    const base = { FACULTY: [], STUDENT: [] };
+    try {
+      const stored = localStorage.getItem(ACCOUNTS_KEY);
+      if (stored) return { ...base, ...JSON.parse(stored) };
+    } catch (_) {
+      /* ignore */
+    }
+    return base;
+  });
+  const [selectedRole, setSelectedRole] = useState("FACULTY");
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [registerForm, setRegisterForm] = useState({ username: "", password: "" });
+  const [authMessage, setAuthMessage] = useState("");
 
   const fetchEvents = async () => {
     try {
@@ -314,8 +334,87 @@ const App = () => {
     }
   }, [userRole]);
 
-  const handleRoleSelect = (role) => {
-    setUserRole(role);
+  useEffect(() => {
+    if (userName) {
+      localStorage.setItem(USERNAME_KEY, userName);
+    } else {
+      localStorage.removeItem(USERNAME_KEY);
+    }
+  }, [userName]);
+
+  useEffect(() => {
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+  }, [accounts]);
+
+  useEffect(() => {
+    setAuthMessage("");
+  }, [selectedRole]);
+
+  const handleLoginInput = (e) => {
+    const { name, value } = e.target;
+    setLoginForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleRegisterInput = (e) => {
+    const { name, value } = e.target;
+    setRegisterForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleLogin = () => {
+    const username = loginForm.username.trim();
+    const password = loginForm.password.trim();
+    if (!username || !password) {
+      setAuthMessage("Please enter your NetID and BluePassword.");
+      return;
+    }
+    const roleAccounts = accounts[selectedRole] || [];
+    const match = roleAccounts.find(
+      (acc) => acc.username.toLowerCase() === username.toLowerCase()
+    );
+    if (!match || match.password !== password) {
+      setAuthMessage("Invalid credentials for this role.");
+      return;
+    }
+    setUserRole(selectedRole);
+    setUserName(match.username);
+    setAuthMessage("");
+    setLoginForm({ username: "", password: "" });
+    setRegisterForm({ username: "", password: "" });
+  };
+
+  const handleRegister = () => {
+    const username = registerForm.username.trim();
+    const password = registerForm.password.trim();
+    if (!username || !password) {
+      setAuthMessage("Please provide a NetID and BluePassword to register.");
+      return;
+    }
+    const roleAccounts = accounts[selectedRole] || [];
+    if (
+      roleAccounts.some(
+        (acc) => acc.username.toLowerCase() === username.toLowerCase()
+      )
+    ) {
+      setAuthMessage("That NetID already exists for this role. Please log in.");
+      return;
+    }
+    const updatedAccounts = {
+      ...accounts,
+      [selectedRole]: [...roleAccounts, { username, password }],
+    };
+    setAccounts(updatedAccounts);
+    setAuthMessage("Account created! You can log in now.");
+    setRegisterForm({ username: "", password: "" });
+  };
+
+  const handleLogout = () => {
+    setUserRole(null);
+    setUserName(null);
+    setSelectedRole("FACULTY");
+    setAuthMessage("");
+    setLoginForm({ username: "", password: "" });
+    setRegisterForm({ username: "", password: "" });
+    setActiveTab("Active Events");
   };
 
   const fetchEventById = async (id) => {
@@ -492,23 +591,11 @@ const App = () => {
           <div className="content-container">
             <h2 className="content-title">Account</h2>
             <p className="profile-message">
-              Choose how you want to access the dashboard.
+              Signed in as <strong>{userName}</strong> (
+              {userRole === "FACULTY" ? "Faculty / Staff" : "Student"}). Choose
+              "Log out" to switch roles or sign in with another account.
             </p>
-            <div className="form-group">
-              <label className="form-label">Role</label>
-              <select
-                className="form-input"
-                value={userRole}
-                onChange={(e) => handleRoleSelect(e.target.value)}
-              >
-                <option value="FACULTY">Faculty / Staff</option>
-                <option value="STUDENT">Student</option>
-              </select>
-            </div>
-            <button
-              className="button-secondary"
-              onClick={() => handleRoleSelect(null)}
-            >
+            <button className="button-secondary" onClick={handleLogout}>
               Log out
             </button>
           </div>
@@ -519,27 +606,89 @@ const App = () => {
   };
 
   if (!userRole) {
+    const roleDescription =
+      selectedRole === "FACULTY"
+        ? "Faculty & Staff accounts can create and manage events."
+        : "Student accounts can view active and completed events.";
     return (
       <div className="app">
         <div className="content-container">
           <h2 className="content-title">Welcome to the Event Portal</h2>
           <p className="profile-message">
-            Choose how you want to view the prototype dashboard.
+            Select the type of account you would like to use for this prototype.
+            Your username should be your NetID and your password should be your
+            BluePassword.
           </p>
           <div className="role-selection-buttons">
             <button
-              className="button-primary"
-              onClick={() => handleRoleSelect("FACULTY")}
+              className={
+                selectedRole === "FACULTY"
+                  ? "button-primary"
+                  : "button-secondary"
+              }
+              onClick={() => setSelectedRole("FACULTY")}
             >
               Faculty / Staff
             </button>
             <button
-              className="button-secondary"
-              onClick={() => handleRoleSelect("STUDENT")}
+              className={
+                selectedRole === "STUDENT"
+                  ? "button-primary"
+                  : "button-secondary"
+              }
+              onClick={() => setSelectedRole("STUDENT")}
             >
               Student
             </button>
           </div>
+          <p className="profile-message">{roleDescription}</p>
+          <div className="auth-forms">
+            <div className="auth-card">
+              <h3>Log In</h3>
+              <input
+                type="text"
+                name="username"
+                placeholder="NetID"
+                value={loginForm.username}
+                onChange={handleLoginInput}
+                className="form-input"
+              />
+              <input
+                type="password"
+                name="password"
+                placeholder="BluePassword"
+                value={loginForm.password}
+                onChange={handleLoginInput}
+                className="form-input"
+              />
+              <button className="button-primary" onClick={handleLogin}>
+                Log In
+              </button>
+            </div>
+            <div className="auth-card">
+              <h3>Create Account</h3>
+              <input
+                type="text"
+                name="username"
+                placeholder="NetID"
+                value={registerForm.username}
+                onChange={handleRegisterInput}
+                className="form-input"
+              />
+              <input
+                type="password"
+                name="password"
+                placeholder="BluePassword"
+                value={registerForm.password}
+                onChange={handleRegisterInput}
+                className="form-input"
+              />
+              <button className="button-secondary" onClick={handleRegister}>
+                Create Account
+              </button>
+            </div>
+          </div>
+          {authMessage && <p className="auth-message">{authMessage}</p>}
         </div>
       </div>
     );
@@ -551,6 +700,7 @@ const App = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         userRole={userRole}
+        userName={userName}
       />
       <main className="app-main-content">{renderContent()}</main>
 
