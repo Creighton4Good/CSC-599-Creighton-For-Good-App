@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { MapPin, Clock, Users, X, Plus } from "lucide-react";
 import "./App.css";
 
+// Base URL for calling the Spring Boot API during local dev.
 const API_BASE = "http://localhost:8080/api";
 
 const EventCard = ({
